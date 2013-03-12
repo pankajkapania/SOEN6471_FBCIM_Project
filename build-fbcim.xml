@@ -1,0 +1,169 @@
+<?xml version="1.0"?>
+<!--
+    build-fbcim.xml
+
+    Copyright (C) 2012 Ori Rejwan
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+    To build, go to the directory where this file is located and run
+    ant -f build-fbcim.xml
+-->
+<project name="FBCIM" basedir="." default="build">
+    <!-- ============================================================== -->
+    <!-- PROPERTIES                                                     -->
+    <!-- ============================================================== -->
+    <property file="build-fbcim.properties"/>
+
+    <property name="build" location="./build" description="Root directory for the build process." />
+    <property name="build.classes" location="${build}/classes" description="Target directory for the compiler output." />
+    <property name="build.distr" location="${build}/distr" description="Target directory for the distributable files." />
+    <property name="build.distr.win" location="${build.distr}/win" description="Target directory for the windows distributable files." />
+    <property name="build.distr.win.lib" location="${build.distr.win}/lib" description="Target directory for the windows distributable jar/dll files." />
+    <property name="log.properties" location="logging.properties" />
+
+    <property name="src" location="src" description="Location of the project source files." />
+    <property name="resources" location="resources" description="Location of the project graphical resources." />
+
+    <!-- ============================================================== -->
+    <!-- INITIALIZATION                                                 -->
+    <!-- ============================================================== -->
+    <target name="init"
+            description="Performs initialization of the build process.">
+
+        <!-- Create output directory structure -->
+        <delete dir="${build}" />
+        <mkdir dir="${build}"/>
+        <mkdir dir="${build.classes}"/>
+        <mkdir dir="${build.distr}"/>
+        <mkdir dir="${build.distr.win}"/>
+        <mkdir dir="${build.distr.win.lib}"/>
+    </target>
+
+    <!-- ============================================================== -->
+    <!-- COMPILE SOURCES                                                -->
+    <!-- ============================================================== -->
+    <path id="compile.class.path">
+        <pathelement location="./lib/JDICplus.jar" />
+        <pathelement location="./lib/restfb-1.6.9.jar" />
+        <pathelement location="./lib/smack.jar" />
+        <pathelement location="./lib/smackx.jar" />
+        <pathelement location="./lib/smackx-jingle.jar" />
+        <pathelement location="./lib/jl1.0.1.jar" />
+        <pathelement location="./lib/kxml2-min-2.3.0.jar" />
+        <pathelement location="./lib/xmlpull-1.1.3.1.jar" />
+        <pathelement location="./lib/xstream-1.4.2.jar" />
+        <pathelement location="./lib/gson-1.6.jar" />
+    </path>
+
+    <target name="compile"
+        description="Compiles the application source code.">
+
+        <!-- Run the compiler -->
+        <javac
+                destdir="${build.classes}"
+                source="${compile.source}"
+                target="${compile.target}"
+                debug="${compile.debug}"
+                optimize="${compile.optimize}"
+                memoryInitialSize="${compile.memoryInitialSize}"
+                memoryMaximumSize="${compile.memoryMaximumSize}"
+                fork="yes">
+
+            <src path="${src}" />
+
+            <classpath refid="compile.class.path" />
+        </javac>
+
+        <!-- Copy application binary resources -->
+        <copy todir="${build.classes}">
+            <fileset dir="${resources}" includes="**/*.png" />
+            <fileset dir="${resources}" includes="**/*.properties" />
+            <fileset dir="${resources}" includes="**/*.mp3" />
+        </copy>
+    </target>
+
+
+    <!-- ============================================================== -->
+    <!-- PUT COMPILED SOURCES INTO JAR FILE.                            -->
+    <!-- ============================================================== -->
+    <target name="jar" depends="jar-client-win"
+        description="Creates application jar file." />
+
+    <tstamp>
+        <format property="jar.date" pattern="MM/dd/yyyy HH:mm:ss" locale="en" />
+    </tstamp>
+
+    <target name="jar-client-win"
+        description="Creates application client executable jar file for windows platform.">
+
+        <!-- Build client main jar -->
+        <jar destfile="${build.distr.win.lib}/${jar.client}">
+
+            <fileset dir="${build.classes}"/>
+
+            <manifest>
+                <attribute name="Built-By" value="${jar.builtby}" />
+                <attribute name="Built-On" value="${jar.date}" />
+                <attribute name="Main-Class" value="${jar.mainclass}" />
+                <attribute name="Class-path" value="${jar.classpath}" />
+                <attribute name="Implementation-Title" value="${jar.title}" />
+                <attribute name="Implementation-Version" value="${app.version}" />
+                <attribute name="Implementation-Vendor" value="${jar.vendor}" />
+            </manifest>
+        </jar>
+    </target>
+
+    <!-- ============================================================== -->
+    <!-- CREATE DISTRIBUTION PACKAGE.                                   -->
+    <!-- ============================================================== -->
+    <target name="distr" depends="distr-win"
+        description="Creates application distibution package.">
+    </target>
+
+
+    <target name="distr-win"
+        description="Creates application distribution package for Windows platform.">
+
+        <!-- Copy application binary resources -->
+        <copy todir="${build.distr.win}" file="./native/win/${distr.exe}" />
+        <copy todir="${build.distr.win}" file="./native/win/${distr_debug.exe}" />
+
+        <!-- Copy logger properties file -->
+        <copy todir="${build.distr.win}" file="./native/win/${distr.exe}" />
+        <copy todir="${build.distr.win}" file="${log.properties}" />
+
+        <copy todir="${build.distr.win.lib}">
+            <fileset dir="./lib/" includes="windows/x86/**/*.dll" />
+            <fileset dir="./lib/" includes="windows/x86/**/*.exe" />
+            <fileset dir="./lib/" includes="windows/x86/**/*.jar" />
+            <fileset dir="./lib/" includes="lib/**/*.dll" />
+            <fileset dir="./lib/" includes="lib/**/*.pdb" />
+            <fileset dir="./lib/" includes="bin/**/*.dll" />
+            <fileset dir="./lib/" includes="windows/x86/**/*.exe" />
+            <fileset dir="./lib/" includes="windows/x86/**/*.jar" />
+
+            <fileset dir="./lib/" includes="*.jar" />
+        </copy>
+
+    </target>
+
+    <!-- ============================================================== -->
+    <!-- RUN BUILD PROCESS                                              -->
+    <!-- ============================================================== -->
+    <target name="build" depends="init, compile, jar, distr"
+           description="Runs the complete build process." />
+
+</project>
