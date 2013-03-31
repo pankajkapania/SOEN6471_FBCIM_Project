@@ -18,5 +18,16 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 public class FBChatContextLoader {
-
+	private static FBChatContext context = null;
+	private static FBChatContextLoader chatContextLoader = null; 
+	
+	private FBChatContextLoader() {
+	}
+	
+	static FBChatContext initializeFBChatContext(){
+		if (chatContextLoader == null){
+			chatContextLoader = new FBChatContextLoader();
+		}
+		return context;
+	}
 }
