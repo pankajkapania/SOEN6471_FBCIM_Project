@@ -7,4 +7,4 @@ This project is using code from open source project - FBCIM(Face book chat inter
 
 We took this project as a course project wherein we will apply learnings from this course onto the source code.
 
-Primarly we will Refactore the code so that maximum number of bad code smells are removed.
+Primarly we will Refactor the code so that maximum number of bad code smells are removed.
