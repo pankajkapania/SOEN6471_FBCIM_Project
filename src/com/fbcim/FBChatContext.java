@@ -64,81 +64,81 @@ import java.util.logging.Logger;
 public class FBChatContext {
 
     /** Get logger instance to work with. */
-    private static Logger LOG = Logger.getLogger(FBChatContext.class.getCanonicalName());
+	protected static Logger LOG = Logger.getLogger(FBChatContext.class.getCanonicalName());
 
     /**  */
-    private static final int CHAT_HISTORY_SAVE_INTERVAL = 3 * 60 * 1000;
+	protected static final int CHAT_HISTORY_SAVE_INTERVAL = 3 * 60 * 1000;
 
     /**  */
-    private static final int FB_STATUS_UPDATE_INTERVAL = 15 * 60 * 1000;
+	protected static final int FB_STATUS_UPDATE_INTERVAL = 15 * 60 * 1000;
 
-    private static final int FB_STATUS_UPDATE_INITIAL_DELAY = 1 * 1000;
+	protected static final int FB_STATUS_UPDATE_INITIAL_DELAY = 1 * 1000;
 
     /** How often to request new list of ads from server. */
-    private static final int UPDATE_ADS_INTERVAL = 15 * 60 * 1000;
+	protected static final int UPDATE_ADS_INTERVAL = 15 * 60 * 1000;
 
     /** Used to login to facebook and retrieve oauth token. */
-    private FBLoginManager fbLoginManager;
+	protected FBLoginManager fbLoginManager;
 
     /** The chat app main frame. */
-    private FBChatMainFrame fbChatMainFrame;
+	protected FBChatMainFrame fbChatMainFrame;
 
     /** The app. settings object. */
-    private FBCIMSettings settings;
+	protected FBCIMSettings settings;
 
     /** Connection to facebook graph api. */
-    private FBConnection fbConnection;
+	protected FBConnection fbConnection;
 
     /** The actual connection to facebook chat. */
-    private XMPPConnection xmppConnection;
+	protected XMPPConnection xmppConnection;
 
     /** The currently logged in user. */
-    private Roster roster;
+	protected Roster roster;
 
     /** The currently logged in user data. */
-    private VCard vCard;
+	protected VCard vCard;
 
     /** The currently logged in user avatar (mid-size). */
-    private ImageIcon avatarMid;
+	protected ImageIcon avatarMid;
 
     /** The currently logged in user avatar (big). */
-    private ImageIcon avatarBig;
+	protected ImageIcon avatarBig;
 
     /** The current user presence status. */
-    private Presence presence;
+	protected Presence presence;
 
     /** The current contact list. */
-    private FBContactList contactList;
+	protected FBContactList contactList;
 
     /** Keeps all chats initialized during current session. */
-    private FBChatManager chatManager;
+	protected FBChatManager chatManager;
 
     /** The list of registered listeners. */
-    private Set<FBChatContextListener> listeners;
+	protected Set<FBChatContextListener> listeners;
 
     /** The currently active filter used to filter incoming packets. */
-    private PacketFilter filter;
+	protected PacketFilter filter;
 
     /** The currently logged in user id.  */
-    private String userId;
+	protected String userId;
 
     /** Incoming packets listener. */
-    private FBChatPacketListener listener;
+	protected FBChatPacketListener listener;
 
     /** Responsible for contacts FB status update. */
-    private Timer serviceTimer;
+	protected Timer serviceTimer;
 
     /** Provides access to the system tray. */
-    private TrayNotifier trayNotifier;
+	protected TrayNotifier trayNotifier;
 
     /** Keeps smiley icons. */
-    private FBIcons fbIcons;
+	protected FBIcons fbIcons;
 
     /** The avatar cache. */
-    private AvatarCache avatarCache;
+	protected AvatarCache avatarCache;
 
     /** Gateway to ads server. */
-    private AdsGateway adsGateway;
+	protected AdsGateway adsGateway;
 
     /**
      * Constructs chat app. context object.
