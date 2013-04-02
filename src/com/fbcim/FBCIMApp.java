@@ -51,6 +51,9 @@ public class FBCIMApp
     /** The application context to work with.  */
     private FBChatContext context;
 
+    /** The application context to work with.  */
+    FBChatContextLoader ctxIntializer;
+
     /**
      * Constructs application instance.
      */
@@ -89,7 +92,9 @@ public class FBCIMApp
     }
 
     public void initContext() {
-        this.context = new FBChatContext(trayNotifier, fbIcons, settings);
+        
+    	this.context = new FBChatContext(trayNotifier, fbIcons, settings);
+        ctxIntializer =  new FBChatContextLoader(context, trayNotifier, fbIcons, settings);
         this.context.addListener(this);
     }
 
@@ -107,7 +112,7 @@ public class FBCIMApp
                 }
             }
         }
-        context.login(silentLogin);
+        ctxIntializer.login(silentLogin);
     }
 
     /**

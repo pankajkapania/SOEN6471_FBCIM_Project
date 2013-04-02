@@ -124,6 +124,12 @@ public class FBChatContextLoader {
         	context.serviceTimer.schedule(new UpdateAdsTask(), context.UPDATE_ADS_INTERVAL, context.UPDATE_ADS_INTERVAL);
         }
     }
+    
+	public void login(boolean silentLogin) {
+	        context.fbLoginManager.setSilentLogin(silentLogin);
+	        context.fbLoginManager.login();
+	}
+
     /**
      * Updates fb status of all online items.
      *
