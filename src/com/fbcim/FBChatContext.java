@@ -13,7 +13,6 @@ import com.fbcim.ui.FBCIMOptionsDialog;
 import com.fbcim.ui.FBChatImages;
 import com.fbcim.ui.FBChatMainFrame;
 import com.fbcim.ui.FBIcons;
-import com.fbcim.ui.MessageDialog;
 import com.fbcim.ui.TrayNotifier;
 import com.fbcim.util.FileUtil;
 import com.fbcim.util.ImageUtil;
@@ -30,17 +29,9 @@ import org.jivesoftware.smackx.filetransfer.OutgoingFileTransfer;
 import org.jivesoftware.smackx.packet.VCard;
 
 import javax.swing.ImageIcon;
-import javax.swing.SwingUtilities;
-
-import java.awt.Dimension;
-import java.awt.Point;
-import java.awt.Toolkit;
 import java.io.File;
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.Set;
 import java.util.Timer;
-import java.util.TimerTask;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -146,76 +137,11 @@ public class FBChatContext {
      * @param trayNotifier
      *          tray notifier object.
      */
-    public FBChatContext(TrayNotifier trayNotifier, FBIcons fbIcons, FBCIMSettings settings) {
-        this.listeners = Collections.synchronizedSet(new HashSet<FBChatContextListener>());
-        this.trayNotifier = trayNotifier;
-        this.fbIcons = fbIcons;
-        this.settings = settings;
-        this.trayNotifier.setContext(this);
-        this.contactList = new FBContactList(this);
-        this.serviceTimer = new Timer("ServiceTimer",true);
-        this.avatarCache = new AvatarCache(FileUtil.getAvatarCacheDir());
-        this.adsGateway = new AdsGateway();
-
-        this.fbChatMainFrame = new FBChatMainFrame(this);
-        this.fbLoginManager = new FBLoginManager(this, new FBLoginManagerListener() {
-            public void loginSuccessful(boolean showMainFrame) {
-                openContactList(showMainFrame);
-                loadContactList();
-            }
-
-            public void loginCanceled() {
-                new MessageDialog(null, "Error", "Login to Facebook chat canceled!", "OK").showMessageDialog();
-
-//                JOptionPane.showMessageDialog(null, "Login to Facebook chat canceled!");
-                signOut(true);
-            }
-
-            public void loginFailed(Throwable... t) {
-                new MessageDialog(null, "Error", "Login to Facebook chat failed!", "OK").showMessageDialog();
-//                JOptionPane.showMessageDialog(null, "Login to Facebook chat failed!");
-                signOut(true);
-            }
-        });
-
-
-        if (trayNotifier != null) {
-            trayNotifier.setPresence(null);
-        }
+    public FBChatContext() {
     }
 
     public AdsGateway getAdsGateway() {
         return adsGateway;
-    }
-
-    public void login(boolean silentLogin) {
-        fbLoginManager.setSilentLogin(silentLogin);
-        fbLoginManager.login();
-    }
-
-    /**
-     * Opens window that displays list of contacts.
-     */
-    public void openContactList(boolean showMainFrame) {
-        fbChatMainFrame.setSize(settings.getFrameSize());
-
-        // Get saved frame location and size.
-        Point p = settings.getFrameLocation();
-
-        // Get current screen size.
-        Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-
-        // Position main frame on the screen.
-        if ((p == null) ||
-            (p.x < 0) || (p.y < 0) ||
-            (p.x > screenSize.width) || (p.y > screenSize.height))  {
-            fbChatMainFrame.setLocationRelativeTo(null);
-        } else {
-            fbChatMainFrame.setLocation(p.x, p.y);
-        }
-        if (showMainFrame) {
-            showMainFrame();
-        }
     }
 
     public void showMainFrame() {
@@ -239,22 +165,6 @@ public class FBChatContext {
 
         // Make sure we update UI according to the latest settings.
         chatManager.updateGamesBarVisibility();
-    }
-
-    private void loadContactList() {
-        if (SwingUtilities.isEventDispatchThread()) {
-            new Thread() {
-                public void run() {
-                    loadContactList();
-                }
-            }.start();
-            return;
-        } else {
-            getContactList().loadContactList();
-            this.serviceTimer.schedule(new UpdateFBStatusTask(), FB_STATUS_UPDATE_INITIAL_DELAY, FB_STATUS_UPDATE_INTERVAL);
-            this.serviceTimer.schedule(new SaveChatHistoryTask(), CHAT_HISTORY_SAVE_INTERVAL, CHAT_HISTORY_SAVE_INTERVAL);
-            this.serviceTimer.schedule(new UpdateAdsTask(), UPDATE_ADS_INTERVAL, UPDATE_ADS_INTERVAL);
-        }
     }
 
     /**
@@ -684,55 +594,5 @@ public class FBChatContext {
         }
 
         System.out.println(targetContact);
-    }
-
-
-
-    /**
-     * Updates fb status of all online items.
-     *
-     * @author Aleksey Prochukhan
-     * @version 1.0
-     */
-    private class UpdateFBStatusTask extends TimerTask {
-        /** <code>true</code> if we should not update offline contacts. */
-        private boolean skipOffline = false;
-
-        @Override
-        public void run() {
-            contactList.updateContactsFBStatus(skipOffline);
-            if (!skipOffline) {
-                skipOffline = true;
-            }
-        }
-    }
-
-    /**
-     * Updates fb status of all online items.
-     *
-     * @author Aleksey Prochukhan
-     * @version 1.0
-     */
-    private class SaveChatHistoryTask extends TimerTask {
-        /** <code>true</code> if we should not update offline contacts. */
-        private boolean skipOffline = false;
-
-        @Override
-        public void run() {
-            chatManager.saveChatHistory();
-        }
-    }
-
-    /**
-     * Retrieves new ads from server.
-     *
-     * @author Aleksey Prochukhan
-     * @version 1.0
-     */
-    private class UpdateAdsTask extends TimerTask {
-        @Override
-        public void run() {
-            adsGateway.updateAds();
-        }
     }
 }
