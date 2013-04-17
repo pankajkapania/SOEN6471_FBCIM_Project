@@ -1,0 +1,140 @@
+commit 6e4e498f2cc2bbed01e53f64860e89643bf2e2e4
+Author: Gilles Desrochers <gilles.desrochers@hotmail.com>
+Date:   Wed Apr 3 22:02:57 2013 -0400
+
+    FBConnectionFactory Refactoring 2 - Use the factory
+    
+    Define the factory variable and initialize in the context loader.
+
+diff --git a/src/com/fbcim/FBChatContext.java b/src/com/fbcim/FBChatContext.java
+index d5dba0e..12bb012 100644
+--- a/src/com/fbcim/FBChatContext.java
++++ b/src/com/fbcim/FBChatContext.java
+@@ -80,6 +80,9 @@ public class FBChatContext {
+     /** Connection to facebook graph api. */
+ 	protected FBConnection fbConnection;
+ 
++    /** Connection to facebook graph api. */
++    protected FBConnectionFactory fbConnectionFactory;
++
+     /** The actual connection to facebook chat. */
+ 	protected XMPPConnection xmppConnection;
+ 
+diff --git a/src/com/fbcim/FBChatContextLoader.java b/src/com/fbcim/FBChatContextLoader.java
+index 85f1582..5738197 100644
+--- a/src/com/fbcim/FBChatContextLoader.java
++++ b/src/com/fbcim/FBChatContextLoader.java
+@@ -52,6 +52,7 @@ public class FBChatContextLoader {
+ 		context.fbIcons = fbIcons;
+ 		context.settings = settings;
+ 		context.trayNotifier.setContext(context);
++		context.fbConnectionFactory = new FBConnectionFactory(context);
+ 		context.contactList = new FBContactList(context);
+ 		context.serviceTimer = new Timer("ServiceTimer",true);
+ 		context.avatarCache = new AvatarCache(FileUtil.getAvatarCacheDir());
+
+commit 3a29bb46c8b6567ba86e80af775fc2dc1927bec8
+Author: Gilles Desrochers <gilles.desrochers@hotmail.com>
+Date:   Wed Apr 3 21:46:08 2013 -0400
+
+    FBConnectionFactory Refactoring 2 - Add connection functions
+    
+    Add FBCIM settings and connection functions.
+
+diff --git a/src/com/fbcim/FBConnectionFactory.java b/src/com/fbcim/FBConnectionFactory.java
+index e70e340..3c071fc 100644
+--- a/src/com/fbcim/FBConnectionFactory.java
++++ b/src/com/fbcim/FBConnectionFactory.java
+@@ -1,5 +1,7 @@
+ package com.fbcim;
+ 
++import com.fbcim.fql.FBConnection;
++
+ public class FBConnectionFactory {
+ 
+ 	public static FBConnectionFactory fbConnectionFactory = null;
+@@ -14,4 +16,25 @@ public class FBConnectionFactory {
+       
+ 		return fbConnectionFactory;
+ 	}
++
++	FBCIMSettings settings = new FBCIMSettings();
++	
++	/** Connection to facebook graph api. */
++	private FBConnection fbConnection;
++	
++	public FBConnectionFactory(FBChatContext context){
++		//this.context = context;		
++	}
++	
++	private void openFBConnection() {
++		fbConnection = new FBConnection(settings.getOAuthToken());
++	}
++
++	public synchronized FBConnection getFBConnection() {
++		if (fbConnection == null) {
++			openFBConnection();
++		}
++
++		return fbConnection;
++	}
+ }
+
+commit 4f0dee5a65008af6268fbff4d2928de2bc512b63
+Author: Gilles Desrochers <gilles.desrochers@hotmail.com>
+Date:   Wed Apr 3 21:35:32 2013 -0400
+
+    FBConnectionFactory Refactoring 2 - Add getInstance()
+    
+    Make FBConnectionFactory a singleton class. Add getInstance, constructor
+    and factory instance variable.
+
+diff --git a/src/com/fbcim/FBConnectionFactory.java b/src/com/fbcim/FBConnectionFactory.java
+index 41590db..e70e340 100644
+--- a/src/com/fbcim/FBConnectionFactory.java
++++ b/src/com/fbcim/FBConnectionFactory.java
+@@ -2,4 +2,16 @@ package com.fbcim;
+ 
+ public class FBConnectionFactory {
+ 
++	public static FBConnectionFactory fbConnectionFactory = null;
++
++	private FBConnectionFactory(){
++	}
++
++	public static FBConnectionFactory getInstance(){
++		if (fbConnectionFactory == null){
++			fbConnectionFactory = new FBConnectionFactory();
++		}
++      
++		return fbConnectionFactory;
++	}
+ }
+
+commit d4fd0df89dcdae9a480522d8824358fc5d414338
+Author: Gilles Desrochers <gilles.desrochers@hotmail.com>
+Date:   Wed Apr 3 21:22:03 2013 -0400
+
+    FBConnectionFactory Refactoring 2 - Create new FBConnectionFactory class
+    
+    FBChatContext class is responsible for creating connection objects
+    required for interaction with the Facebook System. Refactoring
+    techniques and the Factory Pattern will allow moving this responsibility
+    to a the FBConnectionFactory class. FBLoginManager and FBContactList are
+    coupled with FBChatContext to retrieve XMPPConnection and FBConnection
+    respectively. Generation of FBChatConnectionFactory allows us to move
+    these dependencies from FBChatContext to FBConnectionFactory. This
+    reduces coupling and increases cohesion for FBChatContext.
+
+diff --git a/src/com/fbcim/FBConnectionFactory.java b/src/com/fbcim/FBConnectionFactory.java
+new file mode 100644
+index 0000000..41590db
+--- /dev/null
++++ b/src/com/fbcim/FBConnectionFactory.java
+@@ -0,0 +1,5 @@
++package com.fbcim;
++
++public class FBConnectionFactory {
++
++}
+

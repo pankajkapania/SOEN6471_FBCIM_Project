@@ -1,0 +1,630 @@
+commit 06df78b877686113d9c6df6f28670a18e3503a4c
+Author: Gilles Desrochers <gilles.desrochers@hotmail.com>
+Date:   Mon Apr 1 21:59:47 2013 -0400
+
+    FBChatContext Refactoring 1 - Remove functionality that was moved to FBChatContextLoader
+    
+    Remove moved methods and redefine the constructor.
+
+diff --git a/src/com/fbcim/FBChatContext.java b/src/com/fbcim/FBChatContext.java
+index 2fb2872..d5dba0e 100644
+--- a/src/com/fbcim/FBChatContext.java
++++ b/src/com/fbcim/FBChatContext.java
+@@ -13,7 +13,6 @@ import com.fbcim.ui.FBCIMOptionsDialog;
+ import com.fbcim.ui.FBChatImages;
+ import com.fbcim.ui.FBChatMainFrame;
+ import com.fbcim.ui.FBIcons;
+-import com.fbcim.ui.MessageDialog;
+ import com.fbcim.ui.TrayNotifier;
+ import com.fbcim.util.FileUtil;
+ import com.fbcim.util.ImageUtil;
+@@ -30,17 +29,9 @@ import org.jivesoftware.smackx.filetransfer.OutgoingFileTransfer;
+ import org.jivesoftware.smackx.packet.VCard;
+ 
+ import javax.swing.ImageIcon;
+-import javax.swing.SwingUtilities;
+-
+-import java.awt.Dimension;
+-import java.awt.Point;
+-import java.awt.Toolkit;
+ import java.io.File;
+-import java.util.Collections;
+-import java.util.HashSet;
+ import java.util.Set;
+ import java.util.Timer;
+-import java.util.TimerTask;
+ import java.util.logging.Level;
+ import java.util.logging.Logger;
+ 
+@@ -146,78 +137,13 @@ public class FBChatContext {
+      * @param trayNotifier
+      *          tray notifier object.
+      */
+-    public FBChatContext(TrayNotifier trayNotifier, FBIcons fbIcons, FBCIMSettings settings) {
+-        this.listeners = Collections.synchronizedSet(new HashSet<FBChatContextListener>());
+-        this.trayNotifier = trayNotifier;
+-        this.fbIcons = fbIcons;
+-        this.settings = settings;
+-        this.trayNotifier.setContext(this);
+-        this.contactList = new FBContactList(this);
+-        this.serviceTimer = new Timer("ServiceTimer",true);
+-        this.avatarCache = new AvatarCache(FileUtil.getAvatarCacheDir());
+-        this.adsGateway = new AdsGateway();
+-
+-        this.fbChatMainFrame = new FBChatMainFrame(this);
+-        this.fbLoginManager = new FBLoginManager(this, new FBLoginManagerListener() {
+-            public void loginSuccessful(boolean showMainFrame) {
+-                openContactList(showMainFrame);
+-                loadContactList();
+-            }
+-
+-            public void loginCanceled() {
+-                new MessageDialog(null, "Error", "Login to Facebook chat canceled!", "OK").showMessageDialog();
+-
+-//                JOptionPane.showMessageDialog(null, "Login to Facebook chat canceled!");
+-                signOut(true);
+-            }
+-
+-            public void loginFailed(Throwable... t) {
+-                new MessageDialog(null, "Error", "Login to Facebook chat failed!", "OK").showMessageDialog();
+-//                JOptionPane.showMessageDialog(null, "Login to Facebook chat failed!");
+-                signOut(true);
+-            }
+-        });
+-
+-
+-        if (trayNotifier != null) {
+-            trayNotifier.setPresence(null);
+-        }
++    public FBChatContext() {
+     }
+ 
+     public AdsGateway getAdsGateway() {
+         return adsGateway;
+     }
+ 
+-    public void login(boolean silentLogin) {
+-        fbLoginManager.setSilentLogin(silentLogin);
+-        fbLoginManager.login();
+-    }
+-
+-    /**
+-     * Opens window that displays list of contacts.
+-     */
+-    public void openContactList(boolean showMainFrame) {
+-        fbChatMainFrame.setSize(settings.getFrameSize());
+-
+-        // Get saved frame location and size.
+-        Point p = settings.getFrameLocation();
+-
+-        // Get current screen size.
+-        Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+-
+-        // Position main frame on the screen.
+-        if ((p == null) ||
+-            (p.x < 0) || (p.y < 0) ||
+-            (p.x > screenSize.width) || (p.y > screenSize.height))  {
+-            fbChatMainFrame.setLocationRelativeTo(null);
+-        } else {
+-            fbChatMainFrame.setLocation(p.x, p.y);
+-        }
+-        if (showMainFrame) {
+-            showMainFrame();
+-        }
+-    }
+-
+     public void showMainFrame() {
+         if (isLoggedIn()) {
+             fbChatMainFrame.setVisible(true);
+@@ -241,22 +167,6 @@ public class FBChatContext {
+         chatManager.updateGamesBarVisibility();
+     }
+ 
+-    private void loadContactList() {
+-        if (SwingUtilities.isEventDispatchThread()) {
+-            new Thread() {
+-                public void run() {
+-                    loadContactList();
+-                }
+-            }.start();
+-            return;
+-        } else {
+-            getContactList().loadContactList();
+-            this.serviceTimer.schedule(new UpdateFBStatusTask(), FB_STATUS_UPDATE_INITIAL_DELAY, FB_STATUS_UPDATE_INTERVAL);
+-            this.serviceTimer.schedule(new SaveChatHistoryTask(), CHAT_HISTORY_SAVE_INTERVAL, CHAT_HISTORY_SAVE_INTERVAL);
+-            this.serviceTimer.schedule(new UpdateAdsTask(), UPDATE_ADS_INTERVAL, UPDATE_ADS_INTERVAL);
+-        }
+-    }
+-
+     /**
+      * Registers given context listener.
+      *
+@@ -685,54 +595,4 @@ public class FBChatContext {
+ 
+         System.out.println(targetContact);
+     }
+-
+-
+-
+-    /**
+-     * Updates fb status of all online items.
+-     *
+-     * @author Aleksey Prochukhan
+-     * @version 1.0
+-     */
+-    private class UpdateFBStatusTask extends TimerTask {
+-        /** <code>true</code> if we should not update offline contacts. */
+-        private boolean skipOffline = false;
+-
+-        @Override
+-        public void run() {
+-            contactList.updateContactsFBStatus(skipOffline);
+-            if (!skipOffline) {
+-                skipOffline = true;
+-            }
+-        }
+-    }
+-
+-    /**
+-     * Updates fb status of all online items.
+-     *
+-     * @author Aleksey Prochukhan
+-     * @version 1.0
+-     */
+-    private class SaveChatHistoryTask extends TimerTask {
+-        /** <code>true</code> if we should not update offline contacts. */
+-        private boolean skipOffline = false;
+-
+-        @Override
+-        public void run() {
+-            chatManager.saveChatHistory();
+-        }
+-    }
+-
+-    /**
+-     * Retrieves new ads from server.
+-     *
+-     * @author Aleksey Prochukhan
+-     * @version 1.0
+-     */
+-    private class UpdateAdsTask extends TimerTask {
+-        @Override
+-        public void run() {
+-            adsGateway.updateAds();
+-        }
+-    }
+ }
+\ No newline at end of file
+
+commit 9c6c27c6816d8af0b55969ff93f66f86d505a19f
+Author: Gilles Desrochers <gilles.desrochers@hotmail.com>
+Date:   Mon Apr 1 21:43:58 2013 -0400
+
+    FBChatContext Refactoring 1- Initialize Application context from loader
+    
+    Modify the references in FBCIMApp to initialize FBChatContext via
+    FBChatContextLoader. Also copy login(boolean silentLogin) from
+    FBChatContext to FBChatContextLoader (required by loader)
+
+diff --git a/src/com/fbcim/FBCIMApp.java b/src/com/fbcim/FBCIMApp.java
+index 1acea0f..eb72c83 100644
+--- a/src/com/fbcim/FBCIMApp.java
++++ b/src/com/fbcim/FBCIMApp.java
+@@ -51,6 +51,9 @@ public class FBCIMApp
+     /** The application context to work with.  */
+     private FBChatContext context;
+ 
++    /** The application context to work with.  */
++    FBChatContextLoader ctxIntializer;
++
+     /**
+      * Constructs application instance.
+      */
+@@ -89,7 +92,9 @@ public class FBCIMApp
+     }
+ 
+     public void initContext() {
+-        this.context = new FBChatContext(trayNotifier, fbIcons, settings);
++        
++    	this.context = new FBChatContext(trayNotifier, fbIcons, settings);
++        ctxIntializer =  new FBChatContextLoader(context, trayNotifier, fbIcons, settings);
+         this.context.addListener(this);
+     }
+ 
+@@ -107,7 +112,7 @@ public class FBCIMApp
+                 }
+             }
+         }
+-        context.login(silentLogin);
++        ctxIntializer.login(silentLogin);
+     }
+ 
+     /**
+diff --git a/src/com/fbcim/FBChatContextLoader.java b/src/com/fbcim/FBChatContextLoader.java
+index 8cdd73d..85f1582 100644
+--- a/src/com/fbcim/FBChatContextLoader.java
++++ b/src/com/fbcim/FBChatContextLoader.java
+@@ -124,6 +124,12 @@ public class FBChatContextLoader {
+         	context.serviceTimer.schedule(new UpdateAdsTask(), context.UPDATE_ADS_INTERVAL, context.UPDATE_ADS_INTERVAL);
+         }
+     }
++    
++	public void login(boolean silentLogin) {
++	        context.fbLoginManager.setSilentLogin(silentLogin);
++	        context.fbLoginManager.login();
++	}
++
+     /**
+      * Updates fb status of all online items.
+      *
+
+commit 6b30b0b43837fb199999a3f77004be5980ee1372
+Author: Gilles Desrochers <gilles.desrochers@hotmail.com>
+Date:   Mon Apr 1 21:22:35 2013 -0400
+
+    FBChatContext Refactoring 1 - Copy loader functions to FBChatContextLoader
+    
+    Copy methods initializeFBChatContact(), loadContactlist(),
+    openContactList(boolean showMainFrame) into the new class
+    FBChatContextLoader. It is important to note that 3 private classes also
+    need to be moved from FBChatContext to FBChatContextLoader as they are
+    solely used in the context initialization.
+
+diff --git a/src/com/fbcim/FBChatContext.java b/src/com/fbcim/FBChatContext.java
+index 2011936..2fb2872 100644
+--- a/src/com/fbcim/FBChatContext.java
++++ b/src/com/fbcim/FBChatContext.java
+@@ -64,81 +64,81 @@ import java.util.logging.Logger;
+ public class FBChatContext {
+ 
+     /** Get logger instance to work with. */
+-    private static Logger LOG = Logger.getLogger(FBChatContext.class.getCanonicalName());
++	protected static Logger LOG = Logger.getLogger(FBChatContext.class.getCanonicalName());
+ 
+     /**  */
+-    private static final int CHAT_HISTORY_SAVE_INTERVAL = 3 * 60 * 1000;
++	protected static final int CHAT_HISTORY_SAVE_INTERVAL = 3 * 60 * 1000;
+ 
+     /**  */
+-    private static final int FB_STATUS_UPDATE_INTERVAL = 15 * 60 * 1000;
++	protected static final int FB_STATUS_UPDATE_INTERVAL = 15 * 60 * 1000;
+ 
+-    private static final int FB_STATUS_UPDATE_INITIAL_DELAY = 1 * 1000;
++	protected static final int FB_STATUS_UPDATE_INITIAL_DELAY = 1 * 1000;
+ 
+     /** How often to request new list of ads from server. */
+-    private static final int UPDATE_ADS_INTERVAL = 15 * 60 * 1000;
++	protected static final int UPDATE_ADS_INTERVAL = 15 * 60 * 1000;
+ 
+     /** Used to login to facebook and retrieve oauth token. */
+-    private FBLoginManager fbLoginManager;
++	protected FBLoginManager fbLoginManager;
+ 
+     /** The chat app main frame. */
+-    private FBChatMainFrame fbChatMainFrame;
++	protected FBChatMainFrame fbChatMainFrame;
+ 
+     /** The app. settings object. */
+-    private FBCIMSettings settings;
++	protected FBCIMSettings settings;
+ 
+     /** Connection to facebook graph api. */
+-    private FBConnection fbConnection;
++	protected FBConnection fbConnection;
+ 
+     /** The actual connection to facebook chat. */
+-    private XMPPConnection xmppConnection;
++	protected XMPPConnection xmppConnection;
+ 
+     /** The currently logged in user. */
+-    private Roster roster;
++	protected Roster roster;
+ 
+     /** The currently logged in user data. */
+-    private VCard vCard;
++	protected VCard vCard;
+ 
+     /** The currently logged in user avatar (mid-size). */
+-    private ImageIcon avatarMid;
++	protected ImageIcon avatarMid;
+ 
+     /** The currently logged in user avatar (big). */
+-    private ImageIcon avatarBig;
++	protected ImageIcon avatarBig;
+ 
+     /** The current user presence status. */
+-    private Presence presence;
++	protected Presence presence;
+ 
+     /** The current contact list. */
+-    private FBContactList contactList;
++	protected FBContactList contactList;
+ 
+     /** Keeps all chats initialized during current session. */
+-    private FBChatManager chatManager;
++	protected FBChatManager chatManager;
+ 
+     /** The list of registered listeners. */
+-    private Set<FBChatContextListener> listeners;
++	protected Set<FBChatContextListener> listeners;
+ 
+     /** The currently active filter used to filter incoming packets. */
+-    private PacketFilter filter;
++	protected PacketFilter filter;
+ 
+     /** The currently logged in user id.  */
+-    private String userId;
++	protected String userId;
+ 
+     /** Incoming packets listener. */
+-    private FBChatPacketListener listener;
++	protected FBChatPacketListener listener;
+ 
+     /** Responsible for contacts FB status update. */
+-    private Timer serviceTimer;
++	protected Timer serviceTimer;
+ 
+     /** Provides access to the system tray. */
+-    private TrayNotifier trayNotifier;
++	protected TrayNotifier trayNotifier;
+ 
+     /** Keeps smiley icons. */
+-    private FBIcons fbIcons;
++	protected FBIcons fbIcons;
+ 
+     /** The avatar cache. */
+-    private AvatarCache avatarCache;
++	protected AvatarCache avatarCache;
+ 
+     /** Gateway to ads server. */
+-    private AdsGateway adsGateway;
++	protected AdsGateway adsGateway;
+ 
+     /**
+      * Constructs chat app. context object.
+diff --git a/src/com/fbcim/FBChatContextLoader.java b/src/com/fbcim/FBChatContextLoader.java
+index 71ea224..8cdd73d 100644
+--- a/src/com/fbcim/FBChatContextLoader.java
++++ b/src/com/fbcim/FBChatContextLoader.java
+@@ -1,5 +1,24 @@
+ package com.fbcim;
+ 
++import java.awt.Dimension;
++import java.awt.Point;
++import java.awt.Toolkit;
++import java.util.Collections;
++import java.util.HashSet;
++import java.util.Timer;
++import java.util.TimerTask;
++
++import javax.swing.SwingUtilities;
++
++import com.fbcim.ads.AdsGateway;
++import com.fbcim.chat.FBContactList;
++import com.fbcim.ui.AvatarCache;
++import com.fbcim.ui.FBChatMainFrame;
++import com.fbcim.ui.FBIcons;
++import com.fbcim.ui.MessageDialog;
++import com.fbcim.ui.TrayNotifier;
++import com.fbcim.util.FileUtil;
++
+ /*  Facebook Chat Instant Messenger
+ Copyright (C) 2012 Ori Rejwan
+ 
+@@ -17,17 +36,139 @@ You should have received a copy of the GNU General Public License
+ along with this program; if not, write to the Free Software
+ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
++
+ public class FBChatContextLoader {
+-	private static FBChatContext context = null;
+-	private static FBChatContextLoader chatContextLoader = null; 
+ 	
+-	private FBChatContextLoader() {
++	private FBChatContext context;
++	
++	public FBChatContextLoader(FBChatContext context,TrayNotifier trayNotifier, FBIcons fbIcons, FBCIMSettings settings){
++		this.context = context;
++		intializeFBChatContext(trayNotifier, fbIcons, settings);
+ 	}
+ 	
+-	static FBChatContext initializeFBChatContext(){
+-		if (chatContextLoader == null){
+-			chatContextLoader = new FBChatContextLoader();
++	private void intializeFBChatContext(TrayNotifier trayNotifier, FBIcons fbIcons, FBCIMSettings settings){
++		context.listeners = Collections.synchronizedSet(new HashSet<FBChatContextListener>());
++		context.trayNotifier = trayNotifier;
++		context.fbIcons = fbIcons;
++		context.settings = settings;
++		context.trayNotifier.setContext(context);
++		context.contactList = new FBContactList(context);
++		context.serviceTimer = new Timer("ServiceTimer",true);
++		context.avatarCache = new AvatarCache(FileUtil.getAvatarCacheDir());
++		context.adsGateway = new AdsGateway();
++
++		context.fbChatMainFrame = new FBChatMainFrame(context);
++		context.fbLoginManager = new FBLoginManager(context, new FBLoginManagerListener() {
++			public void loginSuccessful(boolean showMainFrame) {
++				openContactList(showMainFrame);
++				loadContactList();
++			}
++
++			public void loginCanceled() {
++				new MessageDialog(null, "Error", "Login to Facebook chat canceled!", "OK").showMessageDialog();
++
++//	            JOptionPane.showMessageDialog(null, "Login to Facebook chat canceled!");
++				context.signOut(true);
++			}
++
++			public void loginFailed(Throwable... t) {
++				new MessageDialog(null, "Error", "Login to Facebook chat failed!", "OK").showMessageDialog();
++//	            JOptionPane.showMessageDialog(null, "Login to Facebook chat failed!");
++				context.signOut(true);
++			}
++		});
++
++
++		if (trayNotifier != null) {
++			trayNotifier.setPresence(null);
+ 		}
+-		return context;
+ 	}
+-}
++	
++	/**
++	 * Opens window that displays list of contacts.
++	 */
++    private void openContactList(boolean showMainFrame) {
++    	context.fbChatMainFrame.setSize(context.settings.getFrameSize());
++
++        // Get saved frame location and size.
++        Point p = context.settings.getFrameLocation();
++
++        // Get current screen size.
++        Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
++
++        // Position main frame on the screen.
++        if ((p == null) ||
++            (p.x < 0) || (p.y < 0) ||
++            (p.x > screenSize.width) || (p.y > screenSize.height))  {
++        	context.fbChatMainFrame.setLocationRelativeTo(null);
++        } else {
++        	context.fbChatMainFrame.setLocation(p.x, p.y);
++        }
++        if (showMainFrame) {
++        	context.showMainFrame();
++        }
++    }
++
++    private void loadContactList() {
++        if (SwingUtilities.isEventDispatchThread()) {
++            new Thread() {
++                public void run() {
++                    loadContactList();
++                }
++            }.start();
++            return;
++        } else {
++        	context.getContactList().loadContactList();
++        	context.serviceTimer.schedule(new UpdateFBStatusTask(), context.FB_STATUS_UPDATE_INITIAL_DELAY, context.FB_STATUS_UPDATE_INTERVAL);
++        	context.serviceTimer.schedule(new SaveChatHistoryTask(), context.CHAT_HISTORY_SAVE_INTERVAL, context.CHAT_HISTORY_SAVE_INTERVAL);
++        	context.serviceTimer.schedule(new UpdateAdsTask(), context.UPDATE_ADS_INTERVAL, context.UPDATE_ADS_INTERVAL);
++        }
++    }
++    /**
++     * Updates fb status of all online items.
++     *
++     * @author Aleksey Prochukhan
++     * @version 1.0
++     */
++    private class UpdateFBStatusTask extends TimerTask {
++        /** <code>true</code> if we should not update offline contacts. */
++        private boolean skipOffline = false;
++
++        @Override
++        public void run() {
++            context.contactList.updateContactsFBStatus(skipOffline);
++            if (!skipOffline) {
++                skipOffline = true;
++            }
++        }
++    }
++
++    /**
++     * Updates fb status of all online items.
++     *
++     * @author Aleksey Prochukhan
++     * @version 1.0
++     */
++    private class SaveChatHistoryTask extends TimerTask {
++        /** <code>true</code> if we should not update offline contacts. */
++        private boolean skipOffline = false;
++
++        @Override
++        public void run() {
++            context.chatManager.saveChatHistory();
++        }
++    }
++
++    /**
++     * Retrieves new ads from server.
++     *
++     * @author Aleksey Prochukhan
++     * @version 1.0
++     */
++    private class UpdateAdsTask extends TimerTask {
++        @Override
++        public void run() {
++            context.adsGateway.updateAds();
++        }
++    }
++} 
+
+commit ad3ddd6a4cf8e547fe6f7e5ad49cedc635c6b2d3
+Author: Gilles Desrochers <gilles.desrochers@hotmail.com>
+Date:   Sun Mar 31 17:06:09 2013 -0400
+
+    FBChatContext Refactoring 1
+    
+    FBChatContextLoader
+    - Make FBChatContextLoader a singleton
+    - Create initializeFBChatContext() method
+
+diff --git a/src/com/fbcim/FBChatContextLoader.java b/src/com/fbcim/FBChatContextLoader.java
+index 590ccda..71ea224 100644
+--- a/src/com/fbcim/FBChatContextLoader.java
++++ b/src/com/fbcim/FBChatContextLoader.java
+@@ -18,5 +18,16 @@ along with this program; if not, write to the Free Software
+ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+ public class FBChatContextLoader {
+-
++	private static FBChatContext context = null;
++	private static FBChatContextLoader chatContextLoader = null; 
++	
++	private FBChatContextLoader() {
++	}
++	note
++	static FBChatContext initializeFBChatContext(){
++		if (chatContextLoader == null){
++			chatContextLoader = new FBChatContextLoader();
++		}
++		return context;
++	}
+ }
+
+commit b2902d79160381c717b6f922acf660964cdee268
+Author: unknown <desrog1@DESROG1-L2.ent.core.medtronic.com>
+Date:   Sun Mar 31 16:43:46 2013 -0400
+
+    FBChatContext Refactoring 1 - FBChatContextLoader
+    Create FBChatContextLoader
+
+diff --git a/src/com/fbcim/FBChatContextLoader.java b/src/com/fbcim/FBChatContextLoader.java
+new file mode 100644
+index 0000000..590ccda
+--- /dev/null
++++ b/src/com/fbcim/FBChatContextLoader.java
+@@ -0,0 +1,22 @@
++package com.fbcim;
++
++/*  Facebook Chat Instant Messenger
++Copyright (C) 2012 Ori Rejwan
++
++This program is free software; you can redistribute it and/or modify
++it under the terms of the GNU General Public License as published by
++the Free Software Foundation; either version 2 of the License, or
++(at your option) any later version.
++
++This program is distributed in the hope that it will be useful,
++but WITHOUT ANY WARRANTY; without even the implied warranty of
++MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++GNU General Public License for more details.
++
++You should have received a copy of the GNU General Public License
++along with this program; if not, write to the Free Software
++Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++*/
++public class FBChatContextLoader {
++
++}
