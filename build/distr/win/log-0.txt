@@ -1,0 +1,22 @@
+Mar 12, 2013 12:12:09 PM com.fbcim.Main main
+FINE: Starting app....
+Mar 12, 2013 12:12:09 PM com.fbcim.Main main
+FINE: java.library.path: C:\Users\PANKAJ\Google Drive\TA\SOEN387\FBCIM\build\distr\win\lib
+Mar 12, 2013 12:12:09 PM com.fbcim.Main main
+FINE: jna.library.path: C:\Users\PANKAJ\Google Drive\TA\SOEN387\FBCIM\build\distr\win\lib
+Mar 12, 2013 12:12:09 PM com.fbcim.Main main
+FINE: current directory: C:\Users\PANKAJ\Google Drive\TA\SOEN387\FBCIM\build\distr\win
+Mar 12, 2013 12:12:09 PM com.fbcim.ads.AdsGateway getExternalIP
+SEVERE: First attempt to detect external IP address failed!
+Mar 12, 2013 12:12:09 PM com.fbcim.ads.AdsGateway getExternalIP
+SEVERE: Second attempt to detect external IP address failed!
+Mar 12, 2013 12:12:09 PM com.fbcim.ads.AdsGateway getAdsFromServer
+SEVERE: Could not load list of ads!
+java.net.MalformedURLException: no protocol: 
+	at java.net.URL.<init>(Unknown Source)
+	at java.net.URL.<init>(Unknown Source)
+	at java.net.URL.<init>(Unknown Source)
+	at com.fbcim.ads.AdsGateway.getAdsFromServer(AdsGateway.java:227)
+	at com.fbcim.ads.AdsGateway.access$100(AdsGateway.java:39)
+	at com.fbcim.ads.AdsGateway$AdsDownloader.run(AdsGateway.java:278)
+
